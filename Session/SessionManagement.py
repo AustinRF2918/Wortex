@@ -79,7 +79,7 @@ def extract_page_metadata(response):
     return (cdn_type)
     
 
-def create_sandbox(url, **kwargs):
+def create_sandbox(url):
     """
     Takes a url an attempts to create a sandbox from it: May fail in
     the case an unknown CDN is used, the URL is malformed, or other
@@ -101,6 +101,11 @@ def create_sandbox(url, **kwargs):
         handled by the caller.
     """
 
+    sandbox_metadata = {}
+
+    if not isinstance(url, str):
+        logging.debug("Passing of non-string to create_sandbox: create_sandbox only takes string url.")
+        return None
 
     logging.debug("Attempting to session creation for: {}".format(url))
 
@@ -111,12 +116,15 @@ def create_sandbox(url, **kwargs):
     if response is None:
         return None
 
+    # Metadata extraction
     logging.debug("Attempting deduction of CDN on site content...")
-
     site_metadata = extract_page_metadata(response)
 
     if site_metadata == "Unknown":
         logging.debug(Fore.RED + "    Error: We were not able to deduce this sites type." + Style.RESET_ALL)
+        return None
     else:
-        logging.debug(Fore.GREEN + "    We found that this site is a {} site. Is this correct? [Y/N]".format(site_metadata))
+        sandbox_metadata['CDN'] = site_metadata
+
+    
         
