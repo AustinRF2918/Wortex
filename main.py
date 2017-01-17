@@ -9,4 +9,4 @@ parser.add_argument('--d', help='Download and authenticate a session.')
 args = parser.parse_args()
 
 if (args.d != None):
-    sm.create_sandbox(args.d)
+    print(sm.create_sandbox(args.d))

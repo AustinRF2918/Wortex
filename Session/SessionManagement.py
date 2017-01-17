@@ -3,6 +3,7 @@ import requests
 from colorama import Fore, Back, Style
 import logging
 import sys
+from bs4 import BeautifulSoup
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -71,13 +72,32 @@ def extract_page_metadata(response):
 
     """
 
-    if "wp-content" in response.text:
-        return "Wordpress"
-    else:
-        return "Unknown"
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    return (cdn_type)
-    
+    # Default values: Note that we will try to be error
+    # resillient, but sometimes, especially in the case
+    # of cdn_type this is not possible.
+    cdn_type = None
+    title = "Untitled Page"
+    description = "No Description"
+
+    if "wp-content" in response.text:
+        cdn_type = "Wordpress"
+
+    if soup.title.text is not None:
+        title = soup.title.text
+
+    for desc in soup.findAll(attrs={"name": "description"}):
+        # A page should never have more than one description,
+        # and even if it does, this works: shows the developer
+        # that what he has done is probably wrong.
+        description = desc['content']
+        
+    return {
+        'CDN': cdn_type,
+        'Title': title,
+        'Description': description
+    }
 
 def create_sandbox(url):
     """
@@ -101,8 +121,6 @@ def create_sandbox(url):
         handled by the caller.
     """
 
-    sandbox_metadata = {}
-
     if not isinstance(url, str):
         logging.debug("Passing of non-string to create_sandbox: create_sandbox only takes string url.")
         return None
@@ -118,13 +136,11 @@ def create_sandbox(url):
 
     # Metadata extraction
     logging.debug("Attempting deduction of CDN on site content...")
-    site_metadata = extract_page_metadata(response)
+    sandbox_metadata = extract_page_metadata(response)
 
-    if site_metadata == "Unknown":
-        logging.debug(Fore.RED + "    Error: We were not able to deduce this sites type." + Style.RESET_ALL)
-        return None
-    else:
-        sandbox_metadata['CDN'] = site_metadata
+    for key, value in sandbox_metadata.items():
+        if value == None:
+            logging.debug(Fore.RED + "    Error: We were not able to deduce this sites {}".format(key) + Style.RESET_ALL)
+            return None
 
-    
-        
+    return sandbox_metadata
