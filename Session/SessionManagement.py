@@ -1,6 +1,10 @@
 import re
 import requests
 from colorama import Fore, Back, Style
+import logging
+import sys
+
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
 regex = re.compile(
         r'^(?:http|ftp)s?://' # http:// or https://
@@ -10,53 +14,109 @@ regex = re.compile(
         r'(?::\d+)?' # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
-def authenticate_url(url):
+def get_page_request(url):
+    """
+    Takes a url and checks both it's validity as a string and if there
+    is a domain behind the host. Returns a request object in the case
+    that everything goes well, otherwise a None object is returned.
+    
+    Parameters
+    ----------
+    url: string
+         The url that we are authenticating and attempting to
+         get a request object from.
+    
+    Returns
+    -------
+    request
+        The cooresponding request object.
+
+    """
+
     # URL String Validation
-    print("Checking URL validity.")
+    logging.debug("Checking URL validity.")
 
     if not regex.match(url):
-        print(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
+        logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
         return None
     else:
-        print(Fore.GREEN + "    URL Good." + Style.RESET_ALL)
+        logging.debug(Fore.GREEN + "    URL Good." + Style.RESET_ALL)
 
     # Check for existence
-    print("Sending request to url.")
+    logging.debug("Sending request to url.")
 
     request = requests.get(url)
 
     if request.status_code == 200:
-        print(Fore.GREEN + "    Got response!" + Style.RESET_ALL)
+        logging.debug(Fore.GREEN + "    Got response!" + Style.RESET_ALL)
         return request
     else:
-        print(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
+        logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
         return None
 
-def extract_metadata(response):
-    def deduce_cdn(response):
-        if "wp-content" in response.text:
-            return "Wordpress"
-        else:
-            return "Unknown"
+def extract_page_metadata(response):
+    """
+    Takes a response object and attempts to extract various pieces
+    of meta-data from it.
 
-    cdn_type = deduce_cdn(response)
+    Parameters
+    ----------
+    response: response
+        Some valid response object that has been received.
+    
+    Returns
+    -------
+    string
+        The CDN type of the website.
+
+    """
+
+    if "wp-content" in response.text:
+        return "Wordpress"
+    else:
+        return "Unknown"
 
     return (cdn_type)
     
 
-def create_session(url):
-    print("Attempting to session creation for: {}".format(url))
+def create_sandbox(url, **kwargs):
+    """
+    Takes a url an attempts to create a sandbox from it: May fail in
+    the case an unknown CDN is used, the URL is malformed, or other
+    user specific reasons.
+    
+    Parameters
+    ----------
+    url: string
+         The url that we are attempting to make a sandbox out of.
+    
+    debug_mode: bool (Optional)
+         If we wish to display progress information.
+    
+    Returns
+    -------
+    Sandbox, None
+        A new sandbox is returned in the case that everything
+        went well: otherwise a None is returned and is to be
+        handled by the caller.
+    """
 
-    response = authenticate_url(url)
 
+    logging.debug("Attempting to session creation for: {}".format(url))
+
+    # Check validity of URL and create request.
+    response = get_page_request(url)
+
+    # Invalid site.
     if response is None:
         return None
 
-    print("Attempting deduction of CDN on site content...")
-    site_metadata = extract_metadata(response)
+    logging.debug("Attempting deduction of CDN on site content...")
+
+    site_metadata = extract_page_metadata(response)
 
     if site_metadata == "Unknown":
-        print(Fore.RED + "    Error: We were not able to deduce this sites type." + Style.RESET_ALL)
+        logging.debug(Fore.RED + "    Error: We were not able to deduce this sites type." + Style.RESET_ALL)
     else:
-        print(Fore.GREEN + "    We found that this site is a {} site. Is this correct? [Y/N]".format(site_metadata))
+        logging.debug(Fore.GREEN + "    We found that this site is a {} site. Is this correct? [Y/N]".format(site_metadata))
         

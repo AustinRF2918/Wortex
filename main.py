@@ -9,7 +9,4 @@ parser.add_argument('--d', help='Download and authenticate a session.')
 args = parser.parse_args()
 
 if (args.d != None):
-    sm.create_session(args.d)
-
-# Reset potentially changed terminal colors.
-print(Style.RESET_ALL)
+    sm.create_sandbox(args.d)
