@@ -15,7 +15,7 @@ regex = re.compile(
         r'(?::\d+)?' # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
-def get_page_request(url, iteration=0):
+def get_page_response(url, iteration=0):
     """
     Takes a url and checks both it's validity as a string and if there
     is a domain behind the host. Returns a request object in the case
@@ -50,7 +50,7 @@ def get_page_request(url, iteration=0):
                 logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
             return None
         else:
-            http_try = get_page_request('http://' + url, iteration=iteration+1)
+            http_try = get_page_response('http://' + url, iteration=iteration+1)
             if http_try == None:
                 if iteration == 0:
                     logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
@@ -95,7 +95,9 @@ def is_wordpress(response):
 
     """
 
-    # TODO: Add more test cases to this!
+
+    if isinstance(response, requests.Response) or response.status_code != 200:
+        logging.error("Attempted to pass faulty response to is_wordpress")
 
     if "wp-content" in response.text:
         return True
@@ -121,7 +123,8 @@ def is_drupal(response):
 
     """
 
-    # TODO: Add more test cases to this!
+    if isinstance(response, requests.Response) or response.status_code != 200:
+        logging.error("Attempted to pass faulty response to is_drupal")
 
     if "views" in response.text and "panels" in response.text and "CCK" in response.text:
         return True
@@ -130,7 +133,7 @@ def is_drupal(response):
     else:
         return False
 
-def extract_page_metadata(response):
+def get_page_metadata(response):
     """
     Takes a response object and attempts to extract various pieces
     of meta-data from it.
@@ -147,7 +150,7 @@ def extract_page_metadata(response):
     """
 
     if not isinstance(response, requests.Response):
-        logging.debug("Passing of non-response to extract_page_metadata: create_sandbox only takes Response object.")
+        logging.debug("Passing of non-response to get_page_metadata: create_sandbox only takes Response object.")
         return None
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -155,10 +158,8 @@ def extract_page_metadata(response):
     # Default values: Note that we will try to be error
     # resillient, but sometimes, especially in the case
     # of cdn_type this is not possible.
-    cdn_type = None
     title = "Untitled Page"
     description = "No Description"
-
 
     if is_wordpress(response):
         logging.debug(Fore.GREEN + "    This site is a WordPress site!" + Style.RESET_ALL)
@@ -214,7 +215,7 @@ def create_sandbox(url):
     logging.debug("Attempting to session creation for: {}".format(url))
 
     # Check validity of URL and create request.
-    response = get_page_request(url)
+    response = get_page_response(url)
 
     # Invalid site.
     if response is None:
@@ -222,7 +223,7 @@ def create_sandbox(url):
 
     # Metadata extraction
     logging.debug("Attempting deduction of CDN on site content...")
-    sandbox_metadata = extract_page_metadata(response)
+    sandbox_metadata = get_page_metadata(response)
 
     for key, value in sandbox_metadata.items():
         if value == None:
