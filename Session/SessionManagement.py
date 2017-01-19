@@ -56,6 +56,11 @@ def get_page_request(url):
         return None
 
 def extract_page_metadata(response):
+
+    if not isinstance(response, requests.Response):
+        logging.debug("Passing of non-response to extract_page_metadata: create_sandbox only takes Response object.")
+        return None
+
     """
     Takes a response object and attempts to extract various pieces
     of meta-data from it.
@@ -67,8 +72,9 @@ def extract_page_metadata(response):
     
     Returns
     -------
-    string
-        The CDN type of the website.
+    Option<String, None>
+        The CDN type of the website or potentially none.
+
 
     """
 
@@ -82,16 +88,17 @@ def extract_page_metadata(response):
     description = "No Description"
 
     if "wp-content" in response.text:
+        logging.debug(Fore.GREEN + "    This site is a WordPress site!" + Style.RESET_ALL)
         cdn_type = "Wordpress"
 
     if soup.title.text is not None:
-        title = soup.title.text
+        title = soup.title.text.strip()
 
     for desc in soup.findAll(attrs={"name": "description"}):
         # A page should never have more than one description,
         # and even if it does, this works: shows the developer
         # that what he has done is probably wrong.
-        description = desc['content']
+        description = desc['content'].strip()
         
     return {
         'CDN': cdn_type,
