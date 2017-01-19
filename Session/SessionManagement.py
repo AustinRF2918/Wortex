@@ -64,7 +64,11 @@ def get_page_request(url, iteration=0):
     # Check for existence
     logging.debug("Sending request to url.")
 
-    request = requests.get(url)
+    try:
+        request = requests.get(url)
+    except:
+        logging.debug(Fore.RED + "    Error: Request to {} failed.".format(url) + Style.RESET_ALL)
+        return None
 
     if request.status_code == 200:
         logging.debug(Fore.GREEN + "    Got response!" + Style.RESET_ALL)
@@ -164,6 +168,7 @@ def extract_page_metadata(response):
         cdn_type = "Drupal"
     else:
         logging.debug(Fore.RED + "    CDN deduction process failed." + Style.RESET_ALL)
+        cdn_type = "No CDN / Unknown"
 
     if soup.title.text is not None:
         title = soup.title.text.strip()
