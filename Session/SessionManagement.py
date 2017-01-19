@@ -15,7 +15,7 @@ regex = re.compile(
         r'(?::\d+)?' # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
-def get_page_request(url):
+def get_page_request(url, iteration=0):
     """
     Takes a url and checks both it's validity as a string and if there
     is a domain behind the host. Returns a request object in the case
@@ -27,19 +27,37 @@ def get_page_request(url):
          The url that we are authenticating and attempting to
          get a request object from.
     
+    iteration: number
+         Level of recursion: We use recursion to do various fixes
+         on user level problems with writing out the URL.
+    
     Returns
     -------
-    request
-        The cooresponding request object.
-
+    Option<Response, None>
+        The cooresponding response object.
     """
 
+    if iteration > 5:
+        logging.debug("Level of recursion exceeded: breaking request chain.")
+        return None
+        
     # URL String Validation
-    logging.debug("Checking URL validity.")
+    logging.debug("Checking URL validity. Iteration: {}".format(iteration))
 
     if not regex.match(url):
-        logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
-        return None
+        if 'http://' in url:
+            if iteration == 0:
+                logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
+            return None
+        else:
+            http_try = get_page_request('http://' + url, iteration=iteration+1)
+            if http_try == None:
+                if iteration == 0:
+                    logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
+                return None
+            else:
+                return http_try
+                
     else:
         logging.debug(Fore.GREEN + "    URL Good." + Style.RESET_ALL)
 
@@ -55,12 +73,60 @@ def get_page_request(url):
         logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
         return None
 
+
+def is_wordpress(response):
+    """
+    Uses multiple features of the response object that has been returned to
+    check if a website has the features of being WordPress compatable.
+ 
+    Parameters
+    ----------
+    response: response
+        Some valid response object that has been received.
+    
+    Returns
+    -------
+    Bool
+        If the response object looks like it is probably a WordPress site.
+
+    """
+
+    # TODO: Add more test cases to this!
+
+    if "wp-content" in response.text:
+        return True
+    elif "wordpress" in response.text.lower():
+        return True
+    else:
+        return False
+
+def is_drupal(response):
+    """
+    Uses multiple features of the response object that has been returned to
+    check if a website has the features of being WordPress compatable.
+ 
+    Parameters
+    ----------
+    response: response
+        Some valid response object that has been received.
+    
+    Returns
+    -------
+    Bool
+        If the response object looks like it is probably a WordPress site.
+
+    """
+
+    # TODO: Add more test cases to this!
+
+    if "views" in response.text and "panels" in response.text and "CCK" in response.text:
+        return True
+    elif "drupal" in response.text.lower():
+        return True
+    else:
+        return False
+
 def extract_page_metadata(response):
-
-    if not isinstance(response, requests.Response):
-        logging.debug("Passing of non-response to extract_page_metadata: create_sandbox only takes Response object.")
-        return None
-
     """
     Takes a response object and attempts to extract various pieces
     of meta-data from it.
@@ -74,9 +140,11 @@ def extract_page_metadata(response):
     -------
     Option<String, None>
         The CDN type of the website or potentially none.
-
-
     """
+
+    if not isinstance(response, requests.Response):
+        logging.debug("Passing of non-response to extract_page_metadata: create_sandbox only takes Response object.")
+        return None
 
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -87,9 +155,15 @@ def extract_page_metadata(response):
     title = "Untitled Page"
     description = "No Description"
 
-    if "wp-content" in response.text:
+
+    if is_wordpress(response):
         logging.debug(Fore.GREEN + "    This site is a WordPress site!" + Style.RESET_ALL)
         cdn_type = "Wordpress"
+    elif is_drupal(response):
+        logging.debug(Fore.GREEN + "    This site is a Drupal site!" + Style.RESET_ALL)
+        cdn_type = "Drupal"
+    else:
+        logging.debug(Fore.RED + "    CDN deduction process failed." + Style.RESET_ALL)
 
     if soup.title.text is not None:
         title = soup.title.text.strip()
