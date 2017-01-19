@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
-import Session.SessionManagement as sm
 from colorama import Style
+import Session.SessionManagement as sm
 
 parser = ArgumentParser(description="Development framework for automating maintainence of small projects.")
 parser.add_argument('--l', help='Load a user authenticated session.')

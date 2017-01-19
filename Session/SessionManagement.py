@@ -3,6 +3,7 @@ import requests
 from colorama import Fore, Back, Style
 import logging
 import sys
+from Retrieval import Info
 from bs4 import BeautifulSoup
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
@@ -78,114 +79,6 @@ def get_page_response(url, iteration=0):
         return None
 
 
-def is_wordpress(response):
-    """
-    Uses multiple features of the response object that has been returned to
-    check if a website has the features of being WordPress compatable.
- 
-    Parameters
-    ----------
-    response: response
-        Some valid response object that has been received.
-    
-    Returns
-    -------
-    Bool
-        If the response object looks like it is probably a WordPress site.
-
-    """
-
-
-    if isinstance(response, requests.Response) or response.status_code != 200:
-        logging.error("Attempted to pass faulty response to is_wordpress")
-
-    if "wp-content" in response.text:
-        return True
-    elif "wordpress" in response.text.lower():
-        return True
-    else:
-        return False
-
-def is_drupal(response):
-    """
-    Uses multiple features of the response object that has been returned to
-    check if a website has the features of being WordPress compatable.
- 
-    Parameters
-    ----------
-    response: response
-        Some valid response object that has been received.
-    
-    Returns
-    -------
-    Bool
-        If the response object looks like it is probably a WordPress site.
-
-    """
-
-    if isinstance(response, requests.Response) or response.status_code != 200:
-        logging.error("Attempted to pass faulty response to is_drupal")
-
-    if "views" in response.text and "panels" in response.text and "CCK" in response.text:
-        return True
-    elif "drupal" in response.text.lower():
-        return True
-    else:
-        return False
-
-def get_page_metadata(response):
-    """
-    Takes a response object and attempts to extract various pieces
-    of meta-data from it.
-
-    Parameters
-    ----------
-    response: response
-        Some valid response object that has been received.
-    
-    Returns
-    -------
-    Option<String, None>
-        The CDN type of the website or potentially none.
-    """
-
-    if not isinstance(response, requests.Response):
-        logging.debug("Passing of non-response to get_page_metadata: create_sandbox only takes Response object.")
-        return None
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Default values: Note that we will try to be error
-    # resillient, but sometimes, especially in the case
-    # of cdn_type this is not possible.
-    title = "Untitled Page"
-    description = "No Description"
-
-    if is_wordpress(response):
-        logging.debug(Fore.GREEN + "    This site is a WordPress site!" + Style.RESET_ALL)
-        cdn_type = "Wordpress"
-    elif is_drupal(response):
-        logging.debug(Fore.GREEN + "    This site is a Drupal site!" + Style.RESET_ALL)
-        cdn_type = "Drupal"
-    else:
-        logging.debug(Fore.RED + "    CDN deduction process failed." + Style.RESET_ALL)
-        cdn_type = "No CDN / Unknown"
-
-    if soup.title.text is not None:
-        title = soup.title.text.strip()
-
-    for desc in soup.findAll(attrs={"name": "description"}):
-        # A page should never have more than one description,
-        # and even if it does, this works: shows the developer
-        # that what he has done is probably wrong.
-        description = desc['content'].strip()
-        
-    return {
-        'CDN': cdn_type,
-        'Title': title,
-        'Description': description
-    }
-
 def create_sandbox(url):
     """
     Takes a url an attempts to create a sandbox from it: May fail in
@@ -223,7 +116,7 @@ def create_sandbox(url):
 
     # Metadata extraction
     logging.debug("Attempting deduction of CDN on site content...")
-    sandbox_metadata = get_page_metadata(response)
+    sandbox_metadata = Info.fetch_page_metadata(response)
 
     for key, value in sandbox_metadata.items():
         if value == None:
