@@ -16,7 +16,7 @@ regex = re.compile(
         r'(?::\d+)?' # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
-def get_page_response(url, iteration=0):
+def attempt_request(url, iteration=0):
     """
     Takes a url and checks both it's validity as a string and if there
     is a domain behind the host. Returns a request object in the case
@@ -37,6 +37,10 @@ def get_page_response(url, iteration=0):
     Option<Response, None>
         The cooresponding response object.
     """
+
+    if not isinstance(url, str):
+        logging.debug("Passing of non-string to attempt_request: attempt_request only takes string url.")
+        return None
 
     if iteration > 5:
         logging.debug("Level of recursion exceeded: breaking request chain.")
@@ -79,48 +83,38 @@ def get_page_response(url, iteration=0):
         return None
 
 
-def create_sandbox(url):
+def build_site_data(response):
     """
-    Takes a url an attempts to create a sandbox from it: May fail in
-    the case an unknown CDN is used, the URL is malformed, or other
-    user specific reasons.
+    Takes a response and attempts to deduce metadata from it: May fail in
+    certain cases in which case a None object is returned.
     
     Parameters
     ----------
-    url: string
-         The url that we are attempting to make a sandbox out of.
-    
-    debug_mode: bool (Optional)
-         If we wish to display progress information.
+    response: Response
+         The Response object that we are pulling meta-data from.
     
     Returns
     -------
-    Sandbox, None
-        A new sandbox is returned in the case that everything
+    Dictionary, None
+        A new dictionary is returned in the case that everything
         went well: otherwise a None is returned and is to be
         handled by the caller.
     """
 
-    if not isinstance(url, str):
-        logging.debug("Passing of non-string to create_sandbox: create_sandbox only takes string url.")
-        return None
 
-    logging.debug("Attempting to session creation for: {}".format(url))
-
-    # Check validity of URL and create request.
-    response = get_page_response(url)
+    logging.debug("Attempting to build site profile from Response object.")
 
     # Invalid site.
-    if response is None:
+    if response is None or response.status_code != 200:
         return None
 
     # Metadata extraction
     logging.debug("Attempting deduction of CDN on site content...")
-    sandbox_metadata = Info.fetch_page_metadata(response)
+    metadata = Info.fetch_page_metadata(response)
 
-    for key, value in sandbox_metadata.items():
+    for key, value in metadata.items():
         if value == None:
             logging.debug(Fore.RED + "    Error: We were not able to deduce this sites {}".format(key) + Style.RESET_ALL)
             return None
 
-    return sandbox_metadata
+    return metadata

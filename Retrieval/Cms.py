@@ -1,5 +1,6 @@
 import requests
 import logging
+from colorama import Fore, Back, Style
 
 def is_wordpress_site(response):
     """
@@ -19,8 +20,9 @@ def is_wordpress_site(response):
     """
 
 
-    if isinstance(response, requests.Response) or response.status_code != 200:
-        logging.error("Attempted to pass faulty response to is_wordpress")
+    if not isinstance(response, requests.Response) or response.status_code != 200:
+        logging.error("Attempted to pass faulty response to is_wordpress_site")
+        return False
 
     if "wp-content" in response.text:
         return True
@@ -46,8 +48,9 @@ def is_drupal_site(response):
 
     """
 
-    if isinstance(response, requests.Response) or response.status_code != 200:
-        logging.error("Attempted to pass faulty response to is_drupal")
+    if not isinstance(response, requests.Response) or response.status_code != 200:
+        logging.error("Attempted to pass faulty response to is_drupal_site")
+        return False
 
     if "views" in response.text and "panels" in response.text and "CCK" in response.text:
         return True
