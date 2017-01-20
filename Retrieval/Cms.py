@@ -59,3 +59,34 @@ def is_drupal_site(response):
     else:
         return False
 
+def build_cms_classifier(response):
+    def classification_iteration(var, response, word):
+        if word.lower() in response.text.lower():
+            return var + 1
+        else:
+            return var
+
+    w = 0
+    w = classification_iteration(w, response, 'wp-content')
+    w = classification_iteration(w, response, 'wordpress')
+
+    d = 0
+    d = classification_iteration(w, response, 'views')
+    d = classification_iteration(w, response, 'panels')
+    d = classification_iteration(w, response, 'cck')
+    d = classification_iteration(w, response, 'drupal')
+
+    conflicts = False
+
+    if w != 0 and d != 0 or w == 0 and d == 0:
+        conflicts = True
+        
+
+    return {
+        'classifactions': {
+            'drupal_classification' : d,
+            'wordpress_classification': w
+        },
+
+        'conflicts': conflicts
+    }
