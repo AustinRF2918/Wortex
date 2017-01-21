@@ -60,27 +60,47 @@ def is_drupal_site(response):
         return False
 
 def build_cms_classifier(response):
+    """
+    Takes a response and builds a classifier for what CMS it may use. Currently
+    it uses a substring based method, which may be fairly slow. Later on if neccessary
+    this process could be done both iteratively to provide better performance and
+    with APIs, either build by ourselves or possible public that give us guarenteed
+    CMS attributes.
+ 
+    Parameters
+    ----------
+    response: response
+        Some valid response object that has been received.
+    
+    Returns
+    -------
+    Object
+        The object with numerical data and conflicts regarding our responses
+        structure.
+    """
+
+
     def classification_iteration(var, response, word):
-        if word.lower() in response.text.lower():
-            return var + 1
-        else:
-            return var
+        """ Simple functional method to allow quick substring search. Could be faster. Meh. """
+        return var + int(word.lower() in response.text.lower())
 
-    w = 0
-    w = classification_iteration(w, response, 'wp-content')
-    w = classification_iteration(w, response, 'wordpress')
+    def perform_classification(response, substring_list):
+        classification_index = 0
+        # Use functools!!
+        for item in substring_list:
+            classification_index = classification_iteration(w, response, item)
+        return classification_index
+            
 
-    d = 0
-    d = classification_iteration(w, response, 'views')
-    d = classification_iteration(w, response, 'panels')
-    d = classification_iteration(w, response, 'cck')
-    d = classification_iteration(w, response, 'drupal')
+    wordpress_classification = perform_classification(response, ['wp-content', 'wordpress'])
+    drupal_classification = perform_classification(response, ['views', 'panels', 'cck', 'drupal'])
 
-    conflicts = False
+    classification_list = [
+        wordpress_classification,
+        drupal_classification
+    ]
 
-    if w != 0 and d != 0 or w == 0 and d == 0:
-        conflicts = True
-        
+    conflicts = len(list(filter(lambda x: x != 0, classification_list))) <= 1
 
     return {
         'classifactions': {
