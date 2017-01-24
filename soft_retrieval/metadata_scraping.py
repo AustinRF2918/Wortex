@@ -8,7 +8,10 @@ from bs4 import BeautifulSoup
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
-regex = re.compile(
+# This is a regex for validating input URLs. From a developer standpoint
+# it only exists to validate and guarantee proper input user side.
+
+url_regex = re.compile(
         r'^(?:http|ftp)s?://' # http:// or https://
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
         r'localhost|' #localhost...
@@ -49,7 +52,7 @@ def attempt_request(url, iteration=0):
     # URL String Validation
     logging.debug("Checking URL validity. Iteration: {}".format(iteration))
 
-    if not regex.match(url):
+    if not url_regex.match(url):
         if 'http://' in url:
             if iteration == 0:
                 logging.debug(Fore.RED + "    Error: {} is not a proper url.".format(url) + Style.RESET_ALL)
