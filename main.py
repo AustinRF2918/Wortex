@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-import Session.SessionManagement as sm
+import session.session_management as sm
 from colorama import Style
 
 parser = ArgumentParser(description="Development framework for automating maintainence of small projects.")
