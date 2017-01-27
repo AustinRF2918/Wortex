@@ -16,5 +16,4 @@ if (args.d != None):
     print("Data that was found: {}".format(data))
 
 if (args.t != None):
-    req = attempt_request("http://www.andrewjacoblee.com")
-    test(req)
+    test()
