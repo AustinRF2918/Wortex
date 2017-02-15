@@ -1,19 +1,27 @@
 from argparse import ArgumentParser
 from soft_retrieval.metadata_scraping import attempt_request, build_site_data
-from soft_retrieval.content_scraping import test
+from soft_retrieval.content_scraping import run_tests
 from colorama import Style
 
 parser = ArgumentParser(description="Development framework for automating maintainence of small projects.")
 parser.add_argument('--l', help='Load a user authenticated session.')
 parser.add_argument('--d', help='Download and authenticate a session.')
-parser.add_argument('--t', help='Development test.')
+parser.add_argument('command', help='Development test.')
 
-args = parser.parse_args()
+cli_args = parser.parse_args()
 
-if (args.d != None):
-    req = attempt_request(args.d)
-    data = build_site_data(req)
-    print("Data that was found: {}".format(data))
+def app_command(name, l=False):
+    def commands_decorator(func):
+        if cli_args.command != None and cli_args.command == name:
+            func()
+        elif l and cli_args.command == name[0]:
+            func()
+    return commands_decorator
+            
+@app_command("test", l=True)
+def test_app():
+    run_tests()
 
-if (args.t != None):
-    test()
+@app_command("new", l=True)
+def new():
+    run_tests()

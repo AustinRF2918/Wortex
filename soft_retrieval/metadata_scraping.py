@@ -1,10 +1,11 @@
 import re
 import requests
-from colorama import Fore, Back, Style
+from bs4 import BeautifulSoup
 import logging
 import sys
+from colorama import Fore, Back, Style
+
 from retrieval import info
-from bs4 import BeautifulSoup
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
